@@ -1,4 +1,4 @@
-# Assignment 9
+# Assignment 10
 
 ## Task: Read, Process, and Plot Seismic Waveform Data
 
