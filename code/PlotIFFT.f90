@@ -190,12 +190,12 @@ program PlotWaveformFFT
 
         ! Plot filtered time domain
         call pgsci(1)
-        min_E = minval(filtered_data(1:wh%ndata))
-        max_E = maxval(filtered_data(1:wh%ndata))
+        min_E = minval(filtered_data(1:wh%ndata) / size(filtered_data(1:wh%ndata)))
+        max_E = maxval(filtered_data(1:wh%ndata) / size(filtered_data(1:wh%ndata)))
         call pgenv(minval(T), maxval(T), min_E, max_E, 0, 0)
         call pglab('Time (sec)', 'Amplitude', 'Filtered Waveform E'//char(i+48))
         call pgsci(i+1)
-        call pgline(wh%ndata, T, filtered_data(1:wh%ndata))
+        call pgline(wh%ndata, T, filtered_data(1:wh%ndata) / size(filtered_data(1:wh%ndata)))
 
         ! Plot filtered frequency domain
         call pgsci(1)
