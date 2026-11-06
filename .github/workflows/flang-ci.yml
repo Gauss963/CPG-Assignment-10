@@ -21,37 +21,15 @@ jobs:
       - name: Install LLVM Flang
         run: brew install flang
 
-      - name: Compile Fortran sources
-        env:
-          BUILD_DIR: ${{ runner.temp }}/flang-objects
-        run: |
-          set -euo pipefail
-          FLANG="$(brew --prefix flang)/bin/flang"
-          mkdir -p "$BUILD_DIR"
-          "$FLANG" --version
+      - name: Build Fortran executables and PGPLOT bundle
+        run: bash .github/scripts/build-macos.sh
 
-          source_count=0
-          while IFS= read -r -d '' source_file; do
-            source_count=$((source_count + 1))
-            "$FLANG" -c \
-              -J "$BUILD_DIR" \
-              -I "$BUILD_DIR" \
-              -I "$(dirname "$source_file")" \
-              "$source_file" \
-              -o "$BUILD_DIR/$source_count.o"
-          done < <(
-            find . -type f \
-              \( -iname '*.f' -o -iname '*.for' -o -iname '*.f90' \
-                 -o -iname '*.f95' -o -iname '*.f03' -o -iname '*.f08' \) \
-              -not -path './.git/*' \
-              -print0
-          )
-
-          if [ "$source_count" -eq 0 ]; then
-            echo "No Fortran source files were found." >&2
-            exit 1
-          fi
-          echo "Compiled $source_count Fortran source file(s)."
+      - name: Upload macOS release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-assets
+          path: ${{ runner.temp }}/release-assets/*
+          if-no-files-found: error
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -63,16 +41,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Create v1.0.0 release
+      - name: Download macOS release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release-assets
+          path: ${{ runner.temp }}/release-assets
+
+      - name: Create or update v1.0.0 release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v1.0.0
         run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; skipping."
-          else
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
               --target "$GITHUB_SHA" \
               --title "$GITHUB_REPOSITORY $TAG" \
               --generate-notes
           fi
+          gh release upload "$TAG" "$RUNNER_TEMP"/release-assets/* --clobber
